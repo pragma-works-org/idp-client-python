@@ -1,0 +1,323 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ocr-svc api-lib",
+    "version": "0.1.0",
+    "description": "OpenAPI snapshot consumed by service-clients/idp-client/. Hand-authored against the contract documented in docs/docs/working/specs/svc-docling-extraction-api/research.md §7. Regenerate via `make regen-spec` once the live api-lib advertises the full extraction surface."
+  },
+  "servers": [
+    { "url": "http://localhost:8000" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "ApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Api-Key",
+        "description": "Per-customer API key. Resolution order in idp-client: explicit `api_key=` > `IDP_API_KEY` env."
+      }
+    },
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "title": "HealthResponse",
+        "required": ["status", "version"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["ok"],
+            "description": "Liveness signal. Always `ok` when api-lib is up."
+          },
+          "version": {
+            "type": "string",
+            "description": "api-lib semver. Compared against the client snapshot when `compat_check` is enabled."
+          }
+        }
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "title": "ProblemDetails",
+        "description": "RFC 7807 problem document. Returned with `Content-Type: application/problem+json`.",
+        "required": ["type", "title", "status", "detail"],
+        "properties": {
+          "type": { "type": "string", "default": "about:blank" },
+          "title": { "type": "string" },
+          "status": { "type": "integer" },
+          "detail": { "type": "string" },
+          "extra": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true
+          }
+        }
+      },
+      "ResultFormat": {
+        "type": "string",
+        "title": "ResultFormat",
+        "enum": ["text", "markdown", "json", "doctags"],
+        "description": "Extraction output format. Default: `markdown`."
+      },
+      "JobStatus": {
+        "type": "string",
+        "title": "JobStatus",
+        "enum": ["queued", "running", "succeeded", "failed", "cancelled"]
+      },
+      "ConfidenceSummary": {
+        "type": "object",
+        "title": "ConfidenceSummary",
+        "description": "Per-document confidence summary. All fields optional; absent when docling-serve doesn't report.",
+        "properties": {
+          "mean_grade": { "type": ["string", "null"] },
+          "low_grade": { "type": ["string", "null"] },
+          "mean_score": { "type": ["number", "null"], "format": "float" },
+          "low_score": { "type": ["number", "null"], "format": "float" }
+        }
+      },
+      "ExtractResponse": {
+        "type": "object",
+        "title": "ExtractResponse",
+        "description": "Synchronous-extraction response and async result envelope (same shape).",
+        "required": ["pages", "page_count", "processing_time_seconds"],
+        "properties": {
+          "pages": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "One string per page in document order."
+          },
+          "page_count": { "type": "integer" },
+          "processing_time_seconds": { "type": "number", "format": "float" },
+          "confidence": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/ConfidenceSummary" },
+              { "type": "null" }
+            ]
+          }
+        }
+      },
+      "ExtractionJobOut": {
+        "type": "object",
+        "title": "ExtractionJobOut",
+        "description": "Async-job descriptor returned by submit / status endpoints.",
+        "required": ["id", "status", "created_at"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Sqid; opaque public identifier."
+          },
+          "status": { "$ref": "#/components/schemas/JobStatus" },
+          "page_count": { "type": ["integer", "null"] },
+          "error": { "type": ["string", "null"] },
+          "created_at": { "type": "string", "format": "date-time" },
+          "started_at": { "type": ["string", "null"], "format": "date-time" },
+          "completed_at": { "type": ["string", "null"], "format": "date-time" },
+          "result_url": {
+            "type": ["string", "null"],
+            "description": "Path to the result endpoint when status=succeeded."
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    { "ApiKey": [] }
+  ],
+  "paths": {
+    "/health/": {
+      "get": {
+        "operationId": "get_health",
+        "summary": "Liveness probe.",
+        "tags": ["health"],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Service is up.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HealthResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/extraction/sync": {
+      "post": {
+        "operationId": "extract_sync",
+        "summary": "Synchronous extraction (small documents).",
+        "tags": ["extraction"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": { "type": "string", "format": "binary" },
+                  "format": { "$ref": "#/components/schemas/ResultFormat" },
+                  "languages": {
+                    "type": "string",
+                    "description": "Comma-separated OCR language hints (e.g. 'en,es')."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Extraction succeeded.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ExtractResponse" }
+              }
+            }
+          },
+          "413": {
+            "description": "RFC 7807 problem document.",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetails" }
+              }
+            }
+          },
+          "415": {
+            "description": "RFC 7807 problem document.",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetails" }
+              }
+            }
+          },
+          "422": {
+            "description": "RFC 7807 problem document.",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetails" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/extraction/jobs": {
+      "post": {
+        "operationId": "submit_extraction_job",
+        "summary": "Submit an extraction job for asynchronous processing.",
+        "tags": ["extraction"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": { "type": "string", "format": "binary" },
+                  "format": { "$ref": "#/components/schemas/ResultFormat" },
+                  "languages": {
+                    "type": "string",
+                    "description": "Comma-separated OCR language hints."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Job accepted; status begins as `queued`.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ExtractionJobOut" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/extraction/jobs/{id}": {
+      "get": {
+        "operationId": "get_extraction_job",
+        "summary": "Job status descriptor.",
+        "tags": ["extraction"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status descriptor.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ExtractionJobOut" }
+              }
+            }
+          },
+          "404": {
+            "description": "RFC 7807 problem document.",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetails" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "cancel_extraction_job",
+        "summary": "Cancel a queued or running job.",
+        "tags": ["extraction"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "204": { "description": "Cancelled (or already terminal)." },
+          "404": {
+            "description": "RFC 7807 problem document.",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetails" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/extraction/jobs/{id}/result": {
+      "get": {
+        "operationId": "get_extraction_job_result",
+        "summary": "Final extraction result for a succeeded job.",
+        "tags": ["extraction"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Same envelope as `/v1/extraction/sync`.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ExtractResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "RFC 7807 problem document.",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetails" }
+              }
+            }
+          },
+          "409": {
+            "description": "RFC 7807 problem document.",
+            "content": {
+              "application/problem+json": {
+                "schema": { "$ref": "#/components/schemas/ProblemDetails" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

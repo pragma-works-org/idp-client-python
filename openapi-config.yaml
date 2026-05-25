@@ -1,0 +1,12 @@
+# openapi-python-client configuration for service-clients/idp-client/.
+#
+# Generates attrs-based models (the generator's only mode in 0.28+ — the
+# `use_pydantic_v2` knob was removed upstream). Models expose `from_dict` /
+# `to_dict`; the facade speaks attrs at the boundary. The generated tree lives
+# at src/idp_client/_generated/ and is excluded from ruff, mypy, and coverage.
+# Do not hand-edit; rerun `make regen` instead.
+
+field_prefix: "field_"
+package_name_override: "_generated"
+literal_enums: true
+
