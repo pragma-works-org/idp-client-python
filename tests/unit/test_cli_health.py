@@ -120,4 +120,4 @@ def test_health_picks_up_env_api_key(
         )
         result = runner.invoke(app, ["--base-url", base_url, "health"])
     assert result.exit_code == 0, result.output
-    assert route.calls.last.request.headers["x-api-key"] == "from-env"
+    assert route.calls.last.request.headers["authorization"] == "Bearer from-env"

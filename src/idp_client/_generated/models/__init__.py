@@ -7,6 +7,8 @@ from .extraction_job_out import ExtractionJobOut
 from .health_response import HealthResponse
 from .health_response_status import HealthResponseStatus
 from .job_status import JobStatus
+from .open_ai_embedding_request import OpenAIEmbeddingRequest
+from .open_ai_embedding_request_encoding_format import OpenAIEmbeddingRequestEncodingFormat
 from .problem_details import ProblemDetails
 from .problem_details_extra_type_0 import ProblemDetailsExtraType0
 from .result_format import ResultFormat
@@ -20,6 +22,8 @@ __all__ = (
     "HealthResponse",
     "HealthResponseStatus",
     "JobStatus",
+    "OpenAIEmbeddingRequest",
+    "OpenAIEmbeddingRequestEncodingFormat",
     "ProblemDetails",
     "ProblemDetailsExtraType0",
     "ResultFormat",

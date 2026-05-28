@@ -53,6 +53,7 @@ __api_lib_version__: str = _read_api_lib_version()
 
 from .async_client import AsyncIdpClient  # noqa: E402
 from .client import IdpClient  # noqa: E402  (after __api_lib_version__ for client import)
+from .embedding import EmbeddingObject, EmbeddingResponse, EmbeddingUsage  # noqa: E402
 from .errors import (  # noqa: E402
     IdpAuthError,
     IdpError,
@@ -68,6 +69,9 @@ from .errors import (  # noqa: E402
 __all__ = (
     "IdpClient",
     "AsyncIdpClient",
+    "EmbeddingResponse",
+    "EmbeddingObject",
+    "EmbeddingUsage",
     "IdpError",
     "IdpHTTPError",
     "IdpAuthError",

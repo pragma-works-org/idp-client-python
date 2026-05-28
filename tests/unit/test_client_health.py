@@ -1,4 +1,4 @@
-"""Tests for ``IdpClient.health()`` and the X-Api-Key header wiring."""
+"""Tests for ``IdpClient.health()`` and the Authorization Bearer header wiring."""
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ def test_health_returns_status(api_key: str, base_url: str) -> None:
     assert getattr(result.status, "value", str(result.status)) == "ok"
     assert result.version == "0.1.0"
     sent = route.calls.last.request
-    assert sent.headers["x-api-key"] == api_key
+    assert sent.headers["authorization"] == f"Bearer {api_key}"
     assert sent.headers["user-agent"].startswith("idp-client-py/")
     assert sent.headers["x-idp-client"].startswith("py/")
 

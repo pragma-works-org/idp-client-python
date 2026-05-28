@@ -3,29 +3,35 @@
   "info": {
     "title": "ocr-svc api-lib",
     "version": "0.1.0",
-    "description": "OpenAPI snapshot consumed by service-clients/idp-client/. Hand-authored against the contract documented in docs/docs/working/specs/svc-docling-extraction-api/research.md §7. Regenerate via `make regen-spec` once the live api-lib advertises the full extraction surface."
+    "description": "OpenAPI snapshot consumed by service-clients/idp-client/. Hand-authored against the contract documented in docs/docs/working/specs/svc-docling-extraction-api/research.md \u00a77; POST /v1/embeddings + supporting schemas (OpenAIEmbeddingRequest, HTTPValidationError, ValidationError) were surgically merged from the live ocr-svc-dev spec on 2026-05-27. Regenerate via `make regen-spec` once the live api-lib stabilizes (extraction operationIds + {sqid} path param need reconciling with the facade before that switch)."
   },
   "servers": [
-    { "url": "http://localhost:8000" }
+    {
+      "url": "http://localhost:8000"
+    }
   ],
   "components": {
     "securitySchemes": {
-      "ApiKey": {
-        "type": "apiKey",
-        "in": "header",
-        "name": "X-Api-Key",
-        "description": "Per-customer API key. Resolution order in idp-client: explicit `api_key=` > `IDP_API_KEY` env."
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Per-customer API key sent as `Authorization: Bearer <token>`. Resolution order in idp-client: explicit `api_key=` > `IDP_API_KEY` env."
       }
     },
     "schemas": {
       "HealthResponse": {
         "type": "object",
         "title": "HealthResponse",
-        "required": ["status", "version"],
+        "required": [
+          "status",
+          "version"
+        ],
         "properties": {
           "status": {
             "type": "string",
-            "enum": ["ok"],
+            "enum": [
+              "ok"
+            ],
             "description": "Liveness signal. Always `ok` when api-lib is up."
           },
           "version": {
@@ -38,12 +44,26 @@
         "type": "object",
         "title": "ProblemDetails",
         "description": "RFC 7807 problem document. Returned with `Content-Type: application/problem+json`.",
-        "required": ["type", "title", "status", "detail"],
+        "required": [
+          "type",
+          "title",
+          "status",
+          "detail"
+        ],
         "properties": {
-          "type": { "type": "string", "default": "about:blank" },
-          "title": { "type": "string" },
-          "status": { "type": "integer" },
-          "detail": { "type": "string" },
+          "type": {
+            "type": "string",
+            "default": "about:blank"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "detail": {
+            "type": "string"
+          },
           "extra": {
             "type": "object",
             "additionalProperties": true,
@@ -54,42 +74,90 @@
       "ResultFormat": {
         "type": "string",
         "title": "ResultFormat",
-        "enum": ["text", "markdown", "json", "doctags"],
+        "enum": [
+          "text",
+          "markdown",
+          "json",
+          "doctags"
+        ],
         "description": "Extraction output format. Default: `markdown`."
       },
       "JobStatus": {
         "type": "string",
         "title": "JobStatus",
-        "enum": ["queued", "running", "succeeded", "failed", "cancelled"]
+        "enum": [
+          "queued",
+          "running",
+          "succeeded",
+          "failed",
+          "cancelled"
+        ]
       },
       "ConfidenceSummary": {
         "type": "object",
         "title": "ConfidenceSummary",
         "description": "Per-document confidence summary. All fields optional; absent when docling-serve doesn't report.",
         "properties": {
-          "mean_grade": { "type": ["string", "null"] },
-          "low_grade": { "type": ["string", "null"] },
-          "mean_score": { "type": ["number", "null"], "format": "float" },
-          "low_score": { "type": ["number", "null"], "format": "float" }
+          "mean_grade": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "low_grade": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "mean_score": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          },
+          "low_score": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          }
         }
       },
       "ExtractResponse": {
         "type": "object",
         "title": "ExtractResponse",
         "description": "Synchronous-extraction response and async result envelope (same shape).",
-        "required": ["pages", "page_count", "processing_time_seconds"],
+        "required": [
+          "pages",
+          "page_count",
+          "processing_time_seconds"
+        ],
         "properties": {
           "pages": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "One string per page in document order."
           },
-          "page_count": { "type": "integer" },
-          "processing_time_seconds": { "type": "number", "format": "float" },
+          "page_count": {
+            "type": "integer"
+          },
+          "processing_time_seconds": {
+            "type": "number",
+            "format": "float"
+          },
           "confidence": {
             "anyOf": [
-              { "$ref": "#/components/schemas/ConfidenceSummary" },
-              { "type": "null" }
+              {
+                "$ref": "#/components/schemas/ConfidenceSummary"
+              },
+              {
+                "type": "null"
+              }
             ]
           }
         }
@@ -98,42 +166,158 @@
         "type": "object",
         "title": "ExtractionJobOut",
         "description": "Async-job descriptor returned by submit / status endpoints.",
-        "required": ["id", "status", "created_at"],
+        "required": [
+          "id",
+          "status",
+          "created_at"
+        ],
         "properties": {
           "id": {
             "type": "string",
             "description": "Sqid; opaque public identifier."
           },
-          "status": { "$ref": "#/components/schemas/JobStatus" },
-          "page_count": { "type": ["integer", "null"] },
-          "error": { "type": ["string", "null"] },
-          "created_at": { "type": "string", "format": "date-time" },
-          "started_at": { "type": ["string", "null"], "format": "date-time" },
-          "completed_at": { "type": ["string", "null"], "format": "date-time" },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus"
+          },
+          "page_count": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "started_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "completed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
           "result_url": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "description": "Path to the result endpoint when status=succeeded."
           }
         }
+      },
+      "OpenAIEmbeddingRequest": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "input": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "items": {
+                  "items": {
+                    "type": "integer"
+                  },
+                  "type": "array"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Input"
+          },
+          "encoding_format": {
+            "type": "string",
+            "enum": [
+              "float",
+              "base64"
+            ],
+            "title": "Encoding Format",
+            "default": "float"
+          },
+          "dimensions": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dimensions"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model",
+          "input"
+        ],
+        "title": "OpenAIEmbeddingRequest",
+        "description": "OpenAI's `POST /v1/embeddings` request shape.\n\n`input` accepts string, list[str], list[int], list[list[int]] per the spec.\nPre-tokenized inputs (the int variants) are rejected with 400 in v1 (Q5:A)."
       }
     }
   },
   "security": [
-    { "ApiKey": [] }
+    {
+      "BearerAuth": []
+    }
   ],
   "paths": {
     "/health/": {
       "get": {
         "operationId": "get_health",
         "summary": "Liveness probe.",
-        "tags": ["health"],
+        "tags": [
+          "health"
+        ],
         "security": [],
         "responses": {
           "200": {
             "description": "Service is up.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/HealthResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
               }
             }
           }
@@ -144,17 +328,26 @@
       "post": {
         "operationId": "extract_sync",
         "summary": "Synchronous extraction (small documents).",
-        "tags": ["extraction"],
+        "tags": [
+          "extraction"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "multipart/form-data": {
               "schema": {
                 "type": "object",
-                "required": ["file"],
+                "required": [
+                  "file"
+                ],
                 "properties": {
-                  "file": { "type": "string", "format": "binary" },
-                  "format": { "$ref": "#/components/schemas/ResultFormat" },
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "format": {
+                    "$ref": "#/components/schemas/ResultFormat"
+                  },
                   "languages": {
                     "type": "string",
                     "description": "Comma-separated OCR language hints (e.g. 'en,es')."
@@ -169,7 +362,9 @@
             "description": "Extraction succeeded.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ExtractResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractResponse"
+                }
               }
             }
           },
@@ -177,7 +372,9 @@
             "description": "RFC 7807 problem document.",
             "content": {
               "application/problem+json": {
-                "schema": { "$ref": "#/components/schemas/ProblemDetails" }
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
               }
             }
           },
@@ -185,7 +382,9 @@
             "description": "RFC 7807 problem document.",
             "content": {
               "application/problem+json": {
-                "schema": { "$ref": "#/components/schemas/ProblemDetails" }
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
               }
             }
           },
@@ -193,7 +392,9 @@
             "description": "RFC 7807 problem document.",
             "content": {
               "application/problem+json": {
-                "schema": { "$ref": "#/components/schemas/ProblemDetails" }
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
               }
             }
           }
@@ -204,17 +405,26 @@
       "post": {
         "operationId": "submit_extraction_job",
         "summary": "Submit an extraction job for asynchronous processing.",
-        "tags": ["extraction"],
+        "tags": [
+          "extraction"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "multipart/form-data": {
               "schema": {
                 "type": "object",
-                "required": ["file"],
+                "required": [
+                  "file"
+                ],
                 "properties": {
-                  "file": { "type": "string", "format": "binary" },
-                  "format": { "$ref": "#/components/schemas/ResultFormat" },
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "format": {
+                    "$ref": "#/components/schemas/ResultFormat"
+                  },
                   "languages": {
                     "type": "string",
                     "description": "Comma-separated OCR language hints."
@@ -229,7 +439,9 @@
             "description": "Job accepted; status begins as `queued`.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ExtractionJobOut" }
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionJobOut"
+                }
               }
             }
           }
@@ -240,16 +452,27 @@
       "get": {
         "operationId": "get_extraction_job",
         "summary": "Job status descriptor.",
-        "tags": ["extraction"],
+        "tags": [
+          "extraction"
+        ],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
           "200": {
             "description": "Status descriptor.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ExtractionJobOut" }
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionJobOut"
+                }
               }
             }
           },
@@ -257,7 +480,9 @@
             "description": "RFC 7807 problem document.",
             "content": {
               "application/problem+json": {
-                "schema": { "$ref": "#/components/schemas/ProblemDetails" }
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
               }
             }
           }
@@ -266,17 +491,30 @@
       "delete": {
         "operationId": "cancel_extraction_job",
         "summary": "Cancel a queued or running job.",
-        "tags": ["extraction"],
+        "tags": [
+          "extraction"
+        ],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
-          "204": { "description": "Cancelled (or already terminal)." },
+          "204": {
+            "description": "Cancelled (or already terminal)."
+          },
           "404": {
             "description": "RFC 7807 problem document.",
             "content": {
               "application/problem+json": {
-                "schema": { "$ref": "#/components/schemas/ProblemDetails" }
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
               }
             }
           }
@@ -287,16 +525,27 @@
       "get": {
         "operationId": "get_extraction_job_result",
         "summary": "Final extraction result for a succeeded job.",
-        "tags": ["extraction"],
+        "tags": [
+          "extraction"
+        ],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
         ],
         "responses": {
           "200": {
             "description": "Same envelope as `/v1/extraction/sync`.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ExtractResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractResponse"
+                }
               }
             }
           },
@@ -304,7 +553,9 @@
             "description": "RFC 7807 problem document.",
             "content": {
               "application/problem+json": {
-                "schema": { "$ref": "#/components/schemas/ProblemDetails" }
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
               }
             }
           },
@@ -312,7 +563,40 @@
             "description": "RFC 7807 problem document.",
             "content": {
               "application/problem+json": {
-                "schema": { "$ref": "#/components/schemas/ProblemDetails" }
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/embeddings": {
+      "post": {
+        "tags": [
+          "embedding",
+          "openai-compat"
+        ],
+        "summary": "Openai Embed Route",
+        "description": "OpenAI-compatible embeddings endpoint.\n\nEmits OpenAI's error envelope (`{\"error\": {...}}`) instead of RFC 7807 by\ncatching `DomainError` locally. The native `EmbeddingService` is the\ncanonical core \u2014 we adapt input/output shapes only.",
+        "operationId": "openai_embed_route_v1_embeddings_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenAIEmbeddingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           }

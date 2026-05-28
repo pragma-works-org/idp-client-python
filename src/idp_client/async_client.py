@@ -11,7 +11,7 @@ owns its own httpx lifecycle.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import BinaryIO, cast
+from typing import BinaryIO, Literal, cast
 
 import httpx
 
@@ -26,7 +26,9 @@ from ._generated.models import (
     ExtractionJobOut,
     ExtractResponse,
     HealthResponse,
+    OpenAIEmbeddingRequest,
 )
+from ._generated.types import UNSET
 from ._version import __version__
 from .auth import resolve_api_key
 from .client import (
@@ -39,6 +41,7 @@ from .client import (
 from .compat import CompatMode
 from .compat import normalize as _normalize_compat_mode
 from .compat import verify as _verify_compat
+from .embedding import EmbeddingResponse
 from .errors import map_response_to_error
 
 
@@ -65,7 +68,7 @@ class AsyncIdpClient:
         self._base_url = base_url
         ua = f"idp-client-py/{__version__}"
         headers = {
-            "X-Api-Key": self._api_key,
+            "Authorization": f"Bearer {self._api_key}",
             "User-Agent": ua,
             "X-Idp-Client": f"py/{__version__}",
         }
@@ -77,8 +80,6 @@ class AsyncIdpClient:
         self._gen = AuthenticatedClient(
             base_url=base_url,
             token=self._api_key,
-            prefix="",
-            auth_header_name="X-Api-Key",
             timeout=httpx.Timeout(timeout),
         )
         self._gen.set_async_httpx_client(self._http)
@@ -192,6 +193,29 @@ class AsyncIdpClient:
         if not isinstance(result, ExtractResponse):
             raise _unexpected_payload(wrapped, "ExtractResponse")
         return result
+
+    async def embed(
+        self,
+        input: str | list[str],
+        *,
+        model: str,
+        dimensions: int | None = None,
+        encoding_format: Literal["float", "base64"] = "float",
+    ) -> EmbeddingResponse:
+        """``POST /v1/embeddings`` — async OpenAI-compatible embedding call.
+
+        See :meth:`idp_client.IdpClient.embed` for the contract.
+        """
+        await self._ensure_compat()
+        body = OpenAIEmbeddingRequest(
+            model=model,
+            input_=input,
+            encoding_format=encoding_format,
+            dimensions=dimensions if dimensions is not None else UNSET,
+        )
+        resp = await self._http.post("/v1/embeddings", json=body.to_dict())
+        self._raise_for_response(resp)
+        return EmbeddingResponse.from_dict(resp.json())
 
     async def cancel_job(self, job_id: str) -> None:
         """``DELETE /v1/extraction/jobs/{id}`` — async cancel."""

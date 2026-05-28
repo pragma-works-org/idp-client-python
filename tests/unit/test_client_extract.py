@@ -36,7 +36,7 @@ def test_extract_happy_path_with_pre_opened_stream(api_key: str, base_url: str) 
     assert response.page_count == 2
     assert response.pages == ["page one", "page two"]
     sent = route.calls.last.request
-    assert sent.headers["x-api-key"] == api_key
+    assert sent.headers["authorization"] == f"Bearer {api_key}"
     assert sent.headers["content-type"].startswith("multipart/form-data; boundary=")
 
 

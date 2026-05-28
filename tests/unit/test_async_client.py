@@ -33,7 +33,7 @@ async def test_async_health_returns_status(api_key: str, base_url: str) -> None:
     assert getattr(result.status, "value", str(result.status)) == "ok"
     assert result.version == "0.1.0"
     sent = route.calls.last.request
-    assert sent.headers["x-api-key"] == api_key
+    assert sent.headers["authorization"] == f"Bearer {api_key}"
 
 
 async def test_async_health_5xx_raises(api_key: str, base_url: str) -> None:

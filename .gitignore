@@ -226,3 +226,8 @@ __marimo__/
 !.vscode/launch.json
 !.vscode/README.md
 !.vscode/settings.example.json
+
+openspec/
+.claude/
+
+*.pdf

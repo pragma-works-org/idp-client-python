@@ -14,7 +14,7 @@ uv pip install -e service-clients/idp-client
 
 ## Auth
 
-The client sends `X-Api-Key: <token>` on every request. Resolution order:
+The client sends `Authorization: Bearer <token>` on every request. Resolution order:
 
 1. `api_key=` constructor parameter (or `--api-key` CLI flag)
 2. `IDP_API_KEY` environment variable
@@ -127,6 +127,21 @@ with IdpClient() as client:
         raise IdpJobFailed(job.error or "extraction failed")
     result = client.get_job_result(job.id)
 ```
+
+## Examples
+
+[`notebooks/simple/simple-idp.ipynb`](notebooks/simple/simple-idp.ipynb) is a minimal end-to-end notebook: extract a PDF via `IdpClient.extract(..., format="markdown")`, then embed the joined text via `IdpClient.embed(text, model=...)` — IDP serves both extraction and embedding under the same base URL and bearer credential. A single configuration cell at the top exposes every knob; each variable falls back to an env var of the same name.
+
+Required env vars (or edit the config cell):
+
+| Variable          | Default                              | Notes                                                                 |
+| ----------------- | ------------------------------------ | --------------------------------------------------------------------- |
+| `PDF_PATH`        | `notebooks/simple/moore.pdf`         | Any local PDF the IDP server can read                                 |
+| `IDP_BASE_URL`    | `http://localhost:8000`              | Your `ocr-svc` instance — serves extraction _and_ embedding           |
+| `IDP_API_KEY`     | _required_                           | Sent as `Authorization: Bearer …` for both calls                      |
+| `EMBEDDING_MODEL` | `qwen3-0.6b-doc`                     | IDP **profile id** (not an HF model name) — list with `GET /v1/embedding/models` |
+
+The notebook is **not** executed in CI — it is reference documentation. It does require a reachable IDP backend with both extraction and embedding routes deployed.
 
 ## Development
 
